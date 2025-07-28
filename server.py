@@ -342,9 +342,9 @@ Analyze the attached chart image and provide realistic price levels and technica
                 )
             continue
 
-async def get_recommendations(symbol: str, exchange: str) -> str:
-    """Generate recommendations using Gemini AI"""
-    prompt = f"""You are a professional stock analyst. Based on your combined analysis knowledge of {symbol.upper()} listed on {exchange.upper()}, provide a comprehensive recommendation in this exact format:
+async def get_recommendations(symbol: str, exchange: str, chart_image_base64: str) -> str:
+    """Generate recommendations using Gemini AI with chart image analysis"""
+    prompt = f"""You are a professional stock analyst. Based on the attached chart image and your combined analysis knowledge of {symbol.upper()} listed on {exchange.upper()}, provide a comprehensive recommendation in this exact format:
 
 📌 Recommendation Summary  
 📍 Stock: {symbol.upper()}  
@@ -354,36 +354,39 @@ async def get_recommendations(symbol: str, exchange: str) -> str:
 🧩 Combined Outlook  
 - 🧠 Fundamentals: Strong / Weak / Neutral (reason)
 - 💬 Sentiment: Positive / Negative / Neutral (reason)
-- 📈 Technical: Bullish / Bearish / Neutral (reason)
+- 📈 Technical: Bullish / Bearish / Neutral (based on chart analysis)
 
 🎯 Swing Trade Recommendation  
-- Entry Range: ₹xxx – ₹xxx  
-- Stop-Loss: ₹xxx  
-- Target 1: ₹xxx  
-- Target 2: ₹xxx  
+- Entry Range: ₹xxx – ₹xxx (based on chart support/resistance levels)
+- Stop-Loss: ₹xxx (based on chart analysis)
+- Target 1: ₹xxx (based on technical levels)
+- Target 2: ₹xxx (based on chart patterns)
 - Risk Level: Low / Medium / High  
-- Confidence Score: 80–90% (AI-estimated based on alignment of signals)
+- Confidence Score: 80–90% (AI-estimated based on chart and fundamental alignment)
 
-📆 Holding Period Suggestion: 5–7 trading days (can vary)
+📆 Holding Period Suggestion: 5–7 trading days (can vary based on chart momentum)
 
 🔎 Reasoning:  
-(Explain why this trade setup is favorable or risky based on combined analysis)
+(Explain why this trade setup is favorable or risky based on chart analysis combined with fundamentals and sentiment. Reference specific chart patterns, support/resistance levels, and volume indicators visible in the image)
 
 ✅ Final Verdict:  
 ✔️ Action: Consider Entering / Wait & Watch / Avoid  
-📢 Notes: (Earnings approaching / Sector uncertainty / Confirm on volume tomorrow etc.)
+📢 Notes: (Consider chart patterns, volume confirmation, upcoming events, etc.)
 
-Provide realistic analysis based on your knowledge of {symbol.upper()}. Use appropriate currency symbols (₹ for Indian stocks, $ for US stocks). Only return the formatted recommendation, no explanations."""
+**Chart Analysis Integration:**
+Analyze the attached chart image to determine precise entry/exit levels, identify key support and resistance zones, assess volume patterns, and evaluate any chart patterns or technical indicators visible. Use this visual analysis to provide more accurate price targets and risk management levels.
+
+Provide realistic analysis based on both the chart image and your knowledge of {symbol.upper()}. Use appropriate currency symbols (₹ for Indian stocks, $ for US stocks). Only return the formatted recommendation, no explanations."""
     
     # Try with multiple API keys
     for i, api_key in enumerate(GEMINI_API_KEYS):
         try:
-            print(f"🔄 Recommendations - Trying API key {i+1}/{len(GEMINI_API_KEYS)}...")
-            result = await analyze_with_gemini_api(api_key, prompt)
-            print(f"✅ Recommendations - API key {i+1} successful!")
+            print(f"🔄 Recommendations (with Chart) - Trying API key {i+1}/{len(GEMINI_API_KEYS)}...")
+            result = await analyze_with_gemini_api(api_key, prompt, chart_image_base64)
+            print(f"✅ Recommendations (with Chart) - API key {i+1} successful!")
             return result
         except Exception as e:
-            print(f"❌ Recommendations - API key {i+1} failed: {str(e)}")
+            print(f"❌ Recommendations (with Chart) - API key {i+1} failed: {str(e)}")
             if i == len(GEMINI_API_KEYS) - 1:
                 raise HTTPException(
                     status_code=503,
@@ -841,7 +844,7 @@ async def analyze_stock(
         fundamental_task = get_fundamental_analysis(symbol, exchange)
         sentiment_task = get_sentiment_analysis(symbol, exchange)
         technical_task = get_technical_analysis(symbol, exchange, chart_image_base64)
-        recommendations_task = get_recommendations(symbol, exchange)
+        recommendations_task = get_recommendations(symbol, exchange, chart_image_base64)
         
         # Wait for all analyses to complete
         fundamental_analysis, sentiment_analysis, technical_analysis, recommendations = await asyncio.gather(
